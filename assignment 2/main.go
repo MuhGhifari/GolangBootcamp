@@ -34,7 +34,7 @@ type TmpOrder struct {
 	Items        []struct {
 		LineItemId  int    `json:"lineItemId"`
 		ItemCode    string `json:"itemCode"`
-		Description string `json:"Description"`
+		Description string `json:"description"`
 		Quantity    int    `json:"quantity"`
 		OrderID     int    `json:"orderID"`
 	}
