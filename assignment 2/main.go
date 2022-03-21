@@ -17,7 +17,7 @@ type Order struct {
 	gorm.Model
 	CustomerName string
 	OrderedAt    time.Time
-	Items        []Item `gorm:"goreignkey:OrderID"`
+	Items        []Item `gorm:"foreignkey:OrderID"`
 }
 
 type Item struct {
