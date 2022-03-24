@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Warning System</title>
+        <style>
+            body {
+                background-color: #002b49;
+            }
+            
+            .box {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: #2f3640;
+                box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+                color: white;
+                width: 750px;
+                height: 450px;
+                border-radius: 20px;
+            }
+
+            .text-center {
+                text-align: center;
+            }
+
+            .content {
+                font-family: Arial, Helvetica, sans-serif;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                padding: 0;
+                margin: 0;
+            }
+
+            .content table {
+                width: 700px;
+                height: 250px;
+            }
+
+            .content table{
+                background-color: #25292e;
+            }
+
+            .content table th {
+                font-size: large;
+                padding: 5px;
+                background-color: #1e2022;
+            }
+
+
+            .content table td {
+                font-size: 40px;
+                font-family:'Courier New', Courier, monospace;
+                font-weight: bolder;
+            }
+
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="box">
+                <div class="content">
+                    <h1 class="text-center" style="font-size: 35px;">Weather Monitoring System</h1>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50%;">Water Level : <span id="waterLevel">{{ .Water }} M</span></th>
+                                <th style="width: 50%;">Wind Level : <span id="windLevel">{{ .Wind }} M/s</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-center" id="waterStatus"></td>
+                                <td class="text-center" id="windStatus"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="text-center" id="timer"></p>
+                </div>
+            </div>
+        </div>
+        <script rel="javascript" type="text/javascript" href="js/jquery-1.11.3.min.js"></script>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+        <script>
+            $(document).ready(function(){
+                
+                var waterLevel = document.getElementById("waterLevel")
+                var waterStatus = document.getElementById("waterStatus")
+                var windLevel = document.getElementById("windLevel")
+                var windStatus = document.getElementById("windStatus")
+                
+                var waterLevelValue = parseInt(waterLevel.textContent)
+                var windLevelValue = parseInt(windLevel.textContent)
+                
+                if (waterLevelValue < 5) {
+                    statusAman(waterStatus, waterLevel);
+                } else if (waterLevelValue <= 8) {
+                    statusSiaga(waterStatus, waterLevel);
+                } else {
+                    statusBahaya(waterStatus, waterLevel);
+                }
+                
+                if (windLevelValue < 7) {
+                    statusAman(windStatus, windLevel);
+                } else if (windLevelValue <= 15) {
+                    statusSiaga(windStatus, windLevel);
+                } else {
+                    statusBahaya(windStatus, windLevel);
+                }
+                
+                var timer = document.getElementById("timer")
+
+                var counter = 15;
+                var interval = setInterval(function(){
+                    if (counter === 1) {
+                        timer.textContent = "Updating in " + counter + " second...";
+                    } else {
+                        timer.textContent = "Updating in " + counter + " seconds...";
+                    }
+                    if (counter === 0) {
+                        counter = 15;
+                        timer.textContent = "Updating in " + counter + " seconds...";
+                        getData();
+                    }
+                    counter--;
+                },1000);
+
+                function getData() {
+                    $.ajax({
+                        url:"/get-data",
+                        dataType:"json",
+                        type: "GET",
+                        success: function(results){
+                            console.log(results["Water"], typeof results["Water"]);
+                            console.log(results["Wind"], typeof results["Wind"]);
+                            waterLevel.textContent = results["Water"] + " M";
+                            windLevel.textContent = results["Wind"] + " M/s";
+
+                            if (results["Water"] < 5) {
+                                statusAman(waterStatus, waterLevel);
+                            } else if (results["Water"] <= 8) {
+                                statusSiaga(waterStatus, waterLevel);
+                            } else {
+                                statusBahaya(waterStatus, waterLevel);
+                            }
+                            
+                            if (results["Wind"] < 7) {
+                                statusAman(windStatus, windLevel);
+                            } else if (results["Wind"] <= 15) {
+                                statusSiaga(windStatus, windLevel);
+                            } else {
+                                statusBahaya(windStatus, windLevel);
+                            }
+                        }
+                    });
+                }
+
+                function statusAman(statusElement, levelElement) {
+                    levelElement.style.color = "greenyellow";
+                    statusElement.textContent = '"AMAN"';
+                    statusElement.style.color = "white";
+                    statusElement.style.backgroundColor = 'rgb(4, 190, 4)';
+                }
+                
+                function statusSiaga(statusElement, levelElement) {
+                    levelElement.style.color = "yellow";
+                    statusElement.textContent = '"SIAGA"';
+                    statusElement.style.color = "red";
+                    statusElement.style.backgroundColor = "yellow";
+                }
+                
+                function statusBahaya(statusElement, levelElement) {
+                    levelElement.style.color = "red";
+                    statusElement.textContent = '"BAHAYA"';
+                    statusElement.style.color = "white";
+                    statusElement.style.backgroundColor = "red";
+                }
+            });
+            </script>
+    </body>
+    </html>
