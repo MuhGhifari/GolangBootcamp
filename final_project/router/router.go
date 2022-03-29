@@ -31,18 +31,19 @@ func StartApp() *gin.Engine {
 	commentRouter := r.Group("/comments")
 	{
 		commentRouter.Use(middlewares.Authentication())
-		commentRouter.POST("/", controllers.CreateComment)
-		commentRouter.GET("/", controllers.GetComments)
+		commentRouter.POST("", controllers.CreateComment)
+		commentRouter.GET("", controllers.GetComments)
 		commentRouter.PUT("/:commentId", middlewares.CommentAuthorization(), controllers.UpdateComment)
 		commentRouter.DELETE("/:commentId", middlewares.CommentAuthorization(), controllers.DeleteComment)
 	}
-
+	
 	socialMediaRouter := r.Group("/socialmedias")
 	{
-		socialMediaRouter.POST("/", controllers.CreateSocialMedia)
-		socialMediaRouter.GET("/", controllers.GetSocialMedia)
-		socialMediaRouter.PUT("/socialMediaId", controllers.UpdateSocialMedia)
-		socialMediaRouter.DELETE("/socialMediaId", controllers.DeleteSocialMedia)
+		socialMediaRouter.Use(middlewares.Authentication())
+		socialMediaRouter.POST("", controllers.CreateSocialMedia)
+		socialMediaRouter.GET("", controllers.GetSocialMedia)
+		socialMediaRouter.PUT("/:socialMediaId", middlewares.SocialMediaAuthorization(), controllers.UpdateSocialMedia)
+		socialMediaRouter.DELETE("/:socialMediaId", middlewares.SocialMediaAuthorization(), controllers.DeleteSocialMedia)
 	}
 
 	return r
