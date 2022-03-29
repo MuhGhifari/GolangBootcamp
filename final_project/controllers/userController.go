@@ -1,15 +1,23 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/MuhGhifari/GolangBootcamp/final-project/config"
 	"github.com/MuhGhifari/GolangBootcamp/final-project/helpers"
 	"github.com/MuhGhifari/GolangBootcamp/final-project/models"
 	"github.com/gin-gonic/gin"
 )
+
+type userUpdateResult struct {
+	ID        int        `json:"id"`
+	Email     string     `json:"email"`
+	Username  string     `json:"username"`
+	Age       int        `json:"age"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
 
 var (
 	appJSON = "application/json"
@@ -26,8 +34,6 @@ func UserRegister(c *gin.Context) {
 	} else {
 		c.ShouldBind(&User)
 	}
-
-	fmt.Println("HEIWO")
 
 	err := db.Create(&User).Error
 
@@ -91,12 +97,10 @@ func UserLogin(c *gin.Context) {
 
 func UpdateUser(c *gin.Context) {
 	db := config.GetDB()
-	// userData := c.MustGet("userData").(jwt.MapClaims)
 	contentType := helpers.GetContentType(c)
 	User := models.User{}
 
 	userId, _ := strconv.Atoi(c.Param("userId"))
-	// authUserId := uint(userData["id"].(float64))
 
 	if contentType == appJSON {
 		c.ShouldBindJSON(&User)
@@ -104,13 +108,9 @@ func UpdateUser(c *gin.Context) {
 		c.ShouldBind(&User)
 	}
 
-	// User.ID = authUserId
-
 	err := db.Model(&User).Where("id = ?", userId).Updates(models.User{
 		Email:    User.Email,
 		Username: User.Username,
-		Password: helpers.HashPass(User.Password),
-		Age:      User.Age,
 	}).Error
 
 	if err != nil {
@@ -120,15 +120,14 @@ func UpdateUser(c *gin.Context) {
 		})
 	} else {
 		db.Where("id = ?", userId).First(&User)
-
-		c.JSON(http.StatusOK, gin.H{
-			"id":         User.ID,
-			"email":      User.Email,
-			"username":   User.Username,
-			"age":        User.Age,
-			"password":   User.Password,
-			"updated_at": User.UpdatedAt,
-		})
+		result := userUpdateResult{
+			ID:        int(User.ID),
+			Email:     User.Email,
+			Username:  User.Username,
+			Age:       User.Age,
+			UpdatedAt: User.UpdatedAt,
+		}
+		c.JSON(http.StatusOK, result)
 	}
 }
 
@@ -136,9 +135,9 @@ func DeleteUser(c *gin.Context) {
 	var User models.User
 	db := config.GetDB()
 	if err := db.Where("id = ?", c.Param("userId")).First(&User).Error; err != nil {
-    c.JSON(http.StatusBadRequest, gin.H{"error": err})
-    return
-  }
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
 
 	db.Delete(&User)
 	c.JSON(http.StatusOK, gin.H{"message": "Your account has been successfully deleted"})

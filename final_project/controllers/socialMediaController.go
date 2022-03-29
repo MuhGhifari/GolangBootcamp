@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,24 +12,44 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type socialMediaCreatedResult struct {
+	ID             int        `json:"id"`
+	Name           string     `json:"name"`
+	SocialMediaUrl string     `json:"social_media_url"`
+	UserId         int        `json:"user_id"`
+	CreatedAt      *time.Time `json:"created_at"`
+}
+
+type socialMediaUpdatedResult struct {
+	ID             int        `json:"id"`
+	Name           string     `json:"name"`
+	SocialMediaUrl string     `json:"social_media_url"`
+	UserId         int        `json:"user_id"`
+	UpdatedAt      *time.Time `json:"updated_at"`
+}
+
 type SocialMediaUser struct {
-	Id       string `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	ID              int `json:"id"`
+	Username        string `json:"username"`
+	ProfileImageUrl string `default:"avatar.png" json:"profile_image_url"`
 }
 
 type SocialMediaShow struct {
-	Id        int    `json:"id"`
-	Message   string `json:"message"`
-	PhotoId   int    `json:"photo_id"`
-	UserId    int    `json:"user_id"`
-	UpdatedAt *time.Time
-	CreatedAt *time.Time
-	User      *SocialMediaUser
+	ID             int        `json:"id"`
+	Name           string     `json:"name"`
+	SocialMediaUrl string     `json:"social_media_url"`
+	UserId         int        `json:"user_id"`
+	UpdatedAt      *time.Time `json:"created_at"`
+	CreatedAt      *time.Time `json:"updated_at"`
+	User           *SocialMediaUser
+}
+
+type SocialMediaArray struct {
+	SocialMedia []SocialMediaShow `json:"social_medias"`
 }
 
 func GetSocialMedia(c *gin.Context) {
-	var socialMedias []models.Comment
+	var socialMedias []models.SocialMedia
 	var socialMediaShows []SocialMediaShow
 	var socialMediaUser SocialMediaUser
 	db := config.GetDB()
@@ -38,13 +57,19 @@ func GetSocialMedia(c *gin.Context) {
 
 	for _, socialMedia := range socialMedias {
 		var socialMediaShow SocialMediaShow
+		var user models.User
+		
+		db.Model(&models.User{}).Where("id = ?", socialMedia.UserId).Find(&user)
 
-		db.Model(&models.User{}).Where("id = ?", socialMedia.UserId).Find(&socialMediaUser)
+		socialMediaUser.ID = int(user.ID)
+		socialMediaUser.Username = user.Username
+		socialMediaUser.ProfileImageUrl = "default-avatar.png"
 
-		socialMediaShow.Id = int(socialMedia.ID)
-		socialMediaShow.Message = socialMedia.Message
+
+		socialMediaShow.ID = int(socialMedia.ID)
+		socialMediaShow.Name = socialMedia.Name
+		socialMediaShow.SocialMediaUrl = socialMedia.SocialMediaUrl
 		socialMediaShow.UserId = socialMedia.UserId
-		socialMediaShow.PhotoId = socialMedia.PhotoId
 		socialMediaShow.CreatedAt = socialMedia.CreatedAt
 		socialMediaShow.UpdatedAt = socialMedia.UpdatedAt
 		socialMediaShow.User = &socialMediaUser
@@ -52,7 +77,9 @@ func GetSocialMedia(c *gin.Context) {
 		socialMediaShows = append(socialMediaShows, socialMediaShow)
 	}
 
-	c.JSON(http.StatusOK, socialMediaShows)
+	result := SocialMediaArray{socialMediaShows}
+
+	c.JSON(http.StatusOK, result)
 }
 
 func CreateSocialMedia(c *gin.Context) {
@@ -72,8 +99,6 @@ func CreateSocialMedia(c *gin.Context) {
 		c.ShouldBind(&SocialMedia)
 	}
 
-	fmt.Println(SocialMedia)
-
 	err := db.Create(&SocialMedia).Error
 
 	if err != nil {
@@ -84,7 +109,15 @@ func CreateSocialMedia(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, SocialMedia)
+	result := socialMediaCreatedResult{
+		ID:             int(SocialMedia.ID),
+		Name:           SocialMedia.Name,
+		SocialMediaUrl: SocialMedia.SocialMediaUrl,
+		UserId:         SocialMedia.UserId,
+		CreatedAt:      SocialMedia.CreatedAt,
+	}
+
+	c.JSON(http.StatusCreated, result)
 }
 
 func UpdateSocialMedia(c *gin.Context) {
@@ -93,7 +126,7 @@ func UpdateSocialMedia(c *gin.Context) {
 	contentType := helpers.GetContentType(c)
 	SocialMedia := models.SocialMedia{}
 
-	SocialMediaId, _ := strconv.Atoi(c.Param("SocialMediaId"))
+	socialMediaId, _ := strconv.Atoi(c.Param("socialMediaId"))
 	userID := int(userData["id"].(float64))
 
 	if contentType == appJSON {
@@ -103,9 +136,9 @@ func UpdateSocialMedia(c *gin.Context) {
 	}
 
 	SocialMedia.UserId = userID
-	SocialMedia.ID = uint(SocialMediaId)
+	SocialMedia.ID = uint(socialMediaId)
 
-	err := db.Model(&SocialMedia).Where("id = ?", SocialMediaId).Updates(models.SocialMedia{
+	err := db.Model(&SocialMedia).Where("id = ?", socialMediaId).Updates(models.SocialMedia{
 		Name:           SocialMedia.Name,
 		SocialMediaUrl: SocialMedia.SocialMediaUrl,
 	}).Error
@@ -118,7 +151,16 @@ func UpdateSocialMedia(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SocialMedia)
+	db.Where("id = ?", socialMediaId).First(&SocialMedia)
+	result := socialMediaUpdatedResult{
+		ID:             int(SocialMedia.ID),
+		Name:           SocialMedia.Name,
+		SocialMediaUrl: SocialMedia.SocialMediaUrl,
+		UserId:         SocialMedia.UserId,
+		UpdatedAt:      SocialMedia.UpdatedAt,
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 func DeleteSocialMedia(c *gin.Context) {

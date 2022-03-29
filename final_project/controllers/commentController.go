@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,10 +12,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type commentCreatedResult struct {
+	ID        int        `json:"id"`
+	Message   string     `json:"message"`
+	PhotoId   int        `json:"photo_id"`
+	UserId    int        `json:"user_id"`
+	CreatedAt *time.Time `json:"created_at"`
+}
+
+type commentUpdatedResult struct {
+	ID        int        `json:"id"`
+	Message   string     `json:"message"`
+	PhotoId   int        `json:"photo_id"`
+	UserId    int        `json:"user_id"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
 type CommentUser struct {
 	Id       string `json:"id"`
-	Username string `json:"username"`
 	Email    string `json:"email"`
+	Username string `json:"username"`
 }
 
 type CommentPhoto struct {
@@ -28,12 +43,12 @@ type CommentPhoto struct {
 }
 
 type CommentShow struct {
-	Id        int    `json:"id"`
-	Message   string `json:"message"`
-	PhotoId   int    `json:"photo_id"`
-	UserId    int    `json:"user_id"`
-	UpdatedAt *time.Time
-	CreatedAt *time.Time
+	Id        int        `json:"id"`
+	Message   string     `json:"message"`
+	PhotoId   int        `json:"photo_id"`
+	UserId    int        `json:"user_id"`
+	UpdatedAt *time.Time `json:"updated_at"`
+	CreatedAt *time.Time `json:"created_at"`
 	User      *CommentUser
 	Photo     *CommentPhoto
 }
@@ -84,8 +99,6 @@ func CreateComment(c *gin.Context) {
 		c.ShouldBind(&Comment)
 	}
 
-	fmt.Println(Comment)
-
 	err := db.Create(&Comment).Error
 
 	if err != nil {
@@ -96,7 +109,15 @@ func CreateComment(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, Comment)
+	result := commentCreatedResult{
+		ID:        int(Comment.ID),
+		Message:   Comment.Message,
+		PhotoId:   Comment.PhotoId,
+		UserId:    Comment.UserId,
+		CreatedAt: Comment.CreatedAt,
+	}
+
+	c.JSON(http.StatusCreated, result)
 }
 
 func UpdateComment(c *gin.Context) {
@@ -117,8 +138,6 @@ func UpdateComment(c *gin.Context) {
 	Comment.UserId = userID
 	Comment.ID = uint(commentId)
 
-	fmt.Println(Comment.PhotoId)
-
 	err := db.Model(&Comment).Where("id = ?", commentId).Updates(models.Comment{
 		Message: Comment.Message,
 	}).Error
@@ -131,7 +150,16 @@ func UpdateComment(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, Comment)
+	db.Where("id = ?", commentId).First(&Comment)
+	result := commentUpdatedResult{
+		ID:        int(Comment.ID),
+		Message:   Comment.Message,
+		PhotoId:   Comment.PhotoId,
+		UserId:    Comment.UserId,
+		UpdatedAt: Comment.UpdatedAt,
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 func DeleteComment(c *gin.Context) {

@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,17 +12,35 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type photoCreatedResult struct {
+	ID        int        `json:"id"`
+	Title     string     `json:"title"`
+	Caption   string     `json:"caption"`
+	PhotoUrl  string     `json:"photo_url"`
+	UserId    int        `json:"user_id"`
+	CreatedAt *time.Time `json:"created_at"`
+}
+
+type photoUpdatedResult struct {
+	ID        int        `json:"id"`
+	Title     string     `json:"title"`
+	Caption   string     `json:"caption"`
+	PhotoUrl  string     `json:"photo_url"`
+	UserId    int        `json:"user_id"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
 type PhotoUser struct {
-	Username string `json:"username"`
 	Email    string `json:"email"`
+	Username string `json:"username"`
 }
 
 type PhotoShow struct {
-	Id        int `json:"id"`
-	Title     string `json:"title"`
-	Caption   string `json:"caption"`
-	PhotoUrl  string `json:"photo_url"`
-	UserId    int `json:"user_id"`
+	Id        int        `json:"id"`
+	Title     string     `json:"title"`
+	Caption   string     `json:"caption"`
+	PhotoUrl  string     `json:"photo_url"`
+	UserId    int        `json:"user_id"`
 	CreatedAt *time.Time `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
 	User      *PhotoUser
@@ -40,7 +57,7 @@ func GetPhotos(c *gin.Context) {
 		var photoShow PhotoShow
 
 		db.Model(&models.User{}).Where("id = ?", photo.UserId).Find(&photoUser)
-		
+
 		photoShow.Id = int(photo.ID)
 		photoShow.Title = photo.Title
 		photoShow.Caption = photo.Caption
@@ -73,8 +90,6 @@ func CreatePhoto(c *gin.Context) {
 		c.ShouldBind(&Photo)
 	}
 
-	fmt.Println(Photo)
-
 	err := db.Create(&Photo).Error
 
 	if err != nil {
@@ -85,14 +100,16 @@ func CreatePhoto(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"id":         Photo.ID,
-		"title":      Photo.Title,
-		"caption":    Photo.Caption,
-		"photo_url":  Photo.PhotoUrl,
-		"user_id":    Photo.UserId,
-		"created_at": Photo.CreatedAt,
-	})
+	result := photoCreatedResult{
+		ID:        int(Photo.ID),
+		Title:     Photo.Title,
+		Caption:   Photo.Caption,
+		PhotoUrl:  Photo.PhotoUrl,
+		UserId:    Photo.UserId,
+		CreatedAt: Photo.CreatedAt,
+	}
+
+	c.JSON(http.StatusCreated, result)
 }
 
 func UpdatePhoto(c *gin.Context) {
@@ -101,7 +118,7 @@ func UpdatePhoto(c *gin.Context) {
 	contentType := helpers.GetContentType(c)
 	Photo := models.Photo{}
 
-	PhotoId, _ := strconv.Atoi(c.Param("photoId"))
+	photoId, _ := strconv.Atoi(c.Param("photoId"))
 	userID := int(userData["id"].(float64))
 
 	if contentType == appJSON {
@@ -111,13 +128,13 @@ func UpdatePhoto(c *gin.Context) {
 	}
 
 	Photo.UserId = userID
-	Photo.ID = uint(PhotoId)
+	Photo.ID = uint(photoId)
 
-	err := db.Model(&Photo).Where("id = ?", PhotoId).Updates(models.Photo{
-		Title: Photo.Title, 
-		Caption: Photo.Caption,
+	err := db.Model(&Photo).Where("id = ?", photoId).Updates(models.Photo{
+		Title:    Photo.Title,
+		Caption:  Photo.Caption,
 		PhotoUrl: Photo.PhotoUrl,
-		UserId: Photo.UserId,
+		UserId:   Photo.UserId,
 	}).Error
 
 	if err != nil {
@@ -127,17 +144,26 @@ func UpdatePhoto(c *gin.Context) {
 		})
 		return
 	}
+	db.Where("id = ?", photoId).First(&Photo)
+	result := photoUpdatedResult{
+		ID:        int(Photo.ID),
+		Title:     Photo.Title,
+		Caption:   Photo.Caption,
+		PhotoUrl:  Photo.PhotoUrl,
+		UserId:    Photo.UserId,
+		UpdatedAt: Photo.UpdatedAt,
+	}
 
-	c.JSON(http.StatusOK, Photo)
+	c.JSON(http.StatusOK, result)
 }
 
 func DeletePhoto(c *gin.Context) {
 	var Photo models.Photo
 	db := config.GetDB()
 	if err := db.Where("id = ?", c.Param("photoId")).First(&Photo).Error; err != nil {
-    c.JSON(http.StatusBadRequest, gin.H{"error": err})
-    return
-  }
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
 
 	db.Delete(&Photo)
 	c.JSON(http.StatusOK, gin.H{"message": "Your photo has been successfully deleted"})
